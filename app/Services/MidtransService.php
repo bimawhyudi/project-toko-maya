@@ -39,6 +39,15 @@ class MidtransService
             'name' => mb_substr($d->produk->nama_produk, 0, 50),
         ])->values()->all();
 
+        if ((float) $pesanan->ongkir > 0) {
+            $itemDetails[] = [
+                'id' => 'ONGKIR',
+                'price' => (float) $pesanan->ongkir,
+                'quantity' => 1,
+                'name' => 'Ongkos kirim '.($pesanan->ekspedisi ?? ''),
+            ];
+        }
+
         $params = [
             'transaction_details' => [
                 'order_id' => $pesanan->kode_pesanan,
@@ -61,19 +70,38 @@ class MidtransService
 
     /**
      * Verifikasi signature_key webhook:
-     * sha512(order_id + status_code + gross_amount + server_key).
+     * sha512(order_id + status_code + gross_amount + kunci).
+     * Mendukung dashboard lama (kunci = server key) maupun dashboard baru
+     * (kunci = "Signature Secret Key" yang terpisah dari server key API).
      */
     public function signatureValid(array $payload): bool
     {
         $dariPayload = $payload['signature_key'] ?? '';
-        $diharapkan = hash('sha512',
-            ($payload['order_id'] ?? '').
-            ($payload['status_code'] ?? '').
-            ($payload['gross_amount'] ?? '').
-            config('midtrans.server_key')
-        );
 
-        return hash_equals($diharapkan, $dariPayload);
+        foreach ($this->kandidatKunciSignature() as $kunci) {
+            $diharapkan = hash('sha512',
+                ($payload['order_id'] ?? '').
+                ($payload['status_code'] ?? '').
+                ($payload['gross_amount'] ?? '').
+                $kunci
+            );
+
+            if (hash_equals($diharapkan, $dariPayload)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function kandidatKunciSignature(): array
+    {
+        $kandidat = array_filter([
+            config('midtrans.signature_key') ?: null,
+            config('midtrans.server_key') ?: null,
+        ]);
+
+        return array_values(array_unique($kandidat));
     }
 
     /**
