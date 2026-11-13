@@ -7,14 +7,20 @@ use App\Http\Controllers\GudangController;
 use App\Http\Controllers\KasirController;
 use App\Http\Controllers\KatalogController;
 use App\Http\Controllers\KeranjangController;
+use App\Http\Controllers\PembayaranController;
+use App\Http\Controllers\PemilikController;
 use App\Http\Controllers\PesananController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\WebhookController;
 use Illuminate\Support\Facades\Route;
 
 // ==================== PUBLIK (PELANGGAN) ====================
 Route::get('/', [KatalogController::class, 'beranda'])->name('beranda');
 Route::get('/katalog', [KatalogController::class, 'index'])->name('katalog.index');
 Route::get('/produk/{produk}', [KatalogController::class, 'show'])->name('produk.show');
+
+// Webhook Midtrans: tanpa CSRF (dikecualikan di bootstrap/app.php) dan tanpa login.
+Route::post('/midtrans/webhook', [WebhookController::class, 'terima'])->name('midtrans.webhook');
 
 // ==================== AUTENTIKASI & PROFIL ====================
 Route::get('/dashboard', DashboardController::class)
@@ -47,6 +53,10 @@ Route::middleware('auth')->group(function () {
         Route::get('/pesanan', [PesananController::class, 'index'])->name('pesanan.index');
         Route::get('/pesanan/{kode}', [PesananController::class, 'show'])->name('pesanan.show');
         Route::post('/pesanan/{kode}/diterima', [PesananController::class, 'diterima'])->name('pesanan.diterima');
+
+        Route::get('/pesanan/{kode}/bayar', [PembayaranController::class, 'show'])->name('pembayaran.show');
+        Route::post('/pesanan/{kode}/bayar/simulasi', [PembayaranController::class, 'simulasi'])
+            ->name('pembayaran.simulasi'); // hanya aktif saat APP_ENV=local
     });
 
     // ==================== DASBOR KASIR ====================
@@ -67,6 +77,22 @@ Route::middleware('auth')->group(function () {
         Route::post('/pesanan/{pesanan}/kirim', [GudangController::class, 'kirim'])->name('kirim');
         Route::get('/stok', [GudangController::class, 'stok'])->name('stok');
         Route::post('/stok/{produk}', [GudangController::class, 'ubahStok'])->name('stok.ubah');
+    });
+
+    // ==================== DASBOR PEMILIK ====================
+    Route::middleware('role:pemilik')->prefix('pemilik')->name('pemilik.')->group(function () {
+        Route::get('/', [PemilikController::class, 'index'])->name('index');
+        Route::get('/produk', [PemilikController::class, 'produk'])->name('produk');
+        Route::post('/produk', [PemilikController::class, 'simpanProduk'])->name('produk.simpan');
+        Route::put('/produk/{produk}', [PemilikController::class, 'ubahProduk'])->name('produk.ubah');
+        Route::delete('/produk/{produk}', [PemilikController::class, 'hapusProduk'])->name('produk.hapus');
+        Route::post('/kategori', [PemilikController::class, 'simpanKategori'])->name('kategori.simpan');
+        Route::delete('/kategori/{kategori}', [PemilikController::class, 'hapusKategori'])->name('kategori.hapus');
+        Route::get('/staf', [PemilikController::class, 'staf'])->name('staf');
+        Route::post('/staf/{user}/peran', [PemilikController::class, 'ubahPeran'])->name('staf.peran');
+        Route::get('/laporan', [PemilikController::class, 'laporan'])->name('laporan');
+        Route::get('/laporan/export/excel', [PemilikController::class, 'exportExcel'])->name('laporan.excel');
+        Route::get('/laporan/export/pdf', [PemilikController::class, 'exportPdf'])->name('laporan.pdf');
     });
 });
 

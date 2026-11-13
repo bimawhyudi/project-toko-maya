@@ -14,6 +14,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'role' => \App\Http\Middleware\CekRole::class,
         ]);
+
         $middleware->validateCsrfTokens(except: [
             'midtrans/webhook',
         ]);
