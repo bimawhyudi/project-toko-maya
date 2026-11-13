@@ -3,8 +3,11 @@
 use App\Http\Controllers\AlamatController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\GudangController;
+use App\Http\Controllers\KasirController;
 use App\Http\Controllers\KatalogController;
 use App\Http\Controllers\KeranjangController;
+use App\Http\Controllers\PesananController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 
@@ -23,7 +26,7 @@ Route::middleware('auth')->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
-    // ==================== KERANJANG, ALAMAT, CHECKOUT (PELANGGAN) ====================
+    // ==================== KERANJANG, ALAMAT, CHECKOUT, PESANAN (PELANGGAN) ====================
     Route::middleware('role:pelanggan,pemilik')->group(function () {
         Route::get('/keranjang', [KeranjangController::class, 'index'])->name('keranjang.index');
         Route::post('/keranjang/{produk}', [KeranjangController::class, 'tambah'])->name('keranjang.tambah');
@@ -40,6 +43,30 @@ Route::middleware('auth')->group(function () {
         Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout.index');
         Route::post('/checkout', [CheckoutController::class, 'proses'])->name('checkout.proses');
         Route::get('/ongkir/hitung', [CheckoutController::class, 'ongkir'])->name('ongkir.hitung');
+
+        Route::get('/pesanan', [PesananController::class, 'index'])->name('pesanan.index');
+        Route::get('/pesanan/{kode}', [PesananController::class, 'show'])->name('pesanan.show');
+        Route::post('/pesanan/{kode}/diterima', [PesananController::class, 'diterima'])->name('pesanan.diterima');
+    });
+
+    // ==================== DASBOR KASIR ====================
+    Route::middleware('role:kasir')->prefix('kasir')->name('kasir.')->group(function () {
+        Route::get('/', [KasirController::class, 'index'])->name('index');
+        Route::post('/transaksi', [KasirController::class, 'simpanTransaksi'])->name('simpan');
+        Route::get('/ambil', [KasirController::class, 'ambil'])->name('ambil');
+        Route::post('/ambil/serahkan', [KasirController::class, 'serahkan'])->name('serahkan');
+        Route::get('/riwayat', [KasirController::class, 'riwayat'])->name('riwayat');
+        Route::get('/struk/{kode}', [KasirController::class, 'struk'])->name('struk');
+    });
+
+    // ==================== DASBOR ADMIN GUDANG ====================
+    Route::middleware('role:admin_gudang')->prefix('gudang')->name('gudang.')->group(function () {
+        Route::get('/', [GudangController::class, 'index'])->name('index');
+        Route::get('/pesanan', [GudangController::class, 'pesanan'])->name('pesanan');
+        Route::post('/pesanan/{pesanan}/siap', [GudangController::class, 'setSiapDiambil'])->name('siap');
+        Route::post('/pesanan/{pesanan}/kirim', [GudangController::class, 'kirim'])->name('kirim');
+        Route::get('/stok', [GudangController::class, 'stok'])->name('stok');
+        Route::post('/stok/{produk}', [GudangController::class, 'ubahStok'])->name('stok.ubah');
     });
 });
 
