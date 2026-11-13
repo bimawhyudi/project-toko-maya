@@ -57,6 +57,8 @@ class KasirService
                     ]);
                 }
 
+                $p->decrement('stok', $jumlah);
+
                 $pesanan->detail()->create([
                     'produk_id' => $p->id,
                     'jumlah' => $jumlah,
@@ -64,7 +66,7 @@ class KasirService
                     'subtotal' => $p->harga * $jumlah,
                 ]);
 
-                $total += $p->harga;
+                $total += $p->harga * $jumlah;
             }
 
             $pesanan->forceFill(['total_harga' => $total])->save();
