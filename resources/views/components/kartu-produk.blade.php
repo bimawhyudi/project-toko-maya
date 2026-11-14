@@ -52,7 +52,7 @@
         </a>
 
         @auth
-            @if (in_array(auth()->user()->role, ['pelanggan', 'pemilik']))
+            @if (auth()->user()->role === 'pelanggan')
                 <form action="{{ route('keranjang.tambah', $produk) }}" method="POST">
                     @csrf
                     <button type="submit" @disabled($produk->stok <= 0)

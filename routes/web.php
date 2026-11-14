@@ -33,7 +33,7 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
     // ==================== KERANJANG, ALAMAT, CHECKOUT, PESANAN (PELANGGAN) ====================
-    Route::middleware('role:pelanggan,pemilik')->group(function () {
+    Route::middleware('role:pelanggan')->group(function () {
         Route::get('/keranjang', [KeranjangController::class, 'index'])->name('keranjang.index');
         Route::post('/keranjang/{produk}', [KeranjangController::class, 'tambah'])->name('keranjang.tambah');
         Route::patch('/keranjang/item/{detail}', [KeranjangController::class, 'ubah'])->name('keranjang.ubah');
@@ -69,7 +69,7 @@ Route::middleware('auth')->group(function () {
     });
 
     // ==================== DASBOR ADMIN GUDANG ====================
-    Route::middleware('role:admin_gudang')->prefix('gudang')->name('gudang.')->group(function () {
+    Route::middleware('role:admin_gudang,pemilik')->prefix('gudang')->name('gudang.')->group(function () {
         Route::get('/', [GudangController::class, 'index'])->name('index');
         Route::get('/pesanan', [GudangController::class, 'pesanan'])->name('pesanan');
         Route::post('/pesanan/{pesanan}/siap', [GudangController::class, 'setSiapDiambil'])->name('siap');

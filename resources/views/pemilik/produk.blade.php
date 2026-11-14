@@ -89,8 +89,43 @@
             </div>
         </div>
 
+        {{-- FILTER & PENCARIAN --}}
+        <div class="kartu mt-6 p-4">
+            <form method="GET" action="{{ route('pemilik.produk') }}" class="flex flex-wrap items-center gap-3">
+                <input
+                    type="search"
+                    name="q"
+                    value="{{ $kataKunci }}"
+                    placeholder="Cari nama produk…"
+                    class="min-w-48 flex-1 rounded-lg border border-garis bg-surface px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                >
+                <select
+                    name="kategori"
+                    onchange="this.form.submit()"
+                    class="rounded-lg border border-garis bg-surface px-3 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                >
+                    <option value="">Semua Kategori</option>
+                    @foreach ($kategori as $k)
+                        <option value="{{ $k->id }}" @selected((int) $kategoriDipilih === $k->id)>
+                            {{ $k->nama_kategori }}
+                        </option>
+                    @endforeach
+                </select>
+                <button type="submit"
+                    class="rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-dark">
+                    Cari
+                </button>
+                @if ($kataKunci !== '' || $kategoriDipilih)
+                    <a href="{{ route('pemilik.produk') }}"
+                        class="rounded-lg border border-garis px-4 py-2.5 text-sm font-semibold text-gray-600 transition hover:bg-surface">
+                        Reset
+                    </a>
+                @endif
+            </form>
+        </div>
+
         {{-- TABEL PRODUK --}}
-        <div class="kartu mt-6 overflow-x-auto">
+        <div class="kartu mt-4 overflow-x-auto">
             <table class="w-full min-w-[920px] text-sm">
                 <thead class="bg-surface text-xs uppercase text-gray-500">
                     <tr>
@@ -129,7 +164,11 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="5" class="px-4 py-10 text-center text-gray-400">Katalog kosong.</td></tr>
+                        <tr>
+                            <td colspan="5" class="px-4 py-10 text-center text-gray-400">
+                                {{ ($kataKunci !== '' || $kategoriDipilih) ? 'Tidak ada produk yang cocok dengan pencarian/filter.' : 'Katalog kosong.' }}
+                            </td>
+                        </tr>
                     @endforelse
                 </tbody>
             </table>

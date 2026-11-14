@@ -90,13 +90,25 @@ class PemilikController extends Controller
     }
 
     /**
-     * CRUD produk (termasuk upload gambar).
+     * CRUD produk (termasuk upload gambar, filter kategori, dan pencarian).
      */
-    public function produk(): View
+    public function produk(Request $request): View
     {
+        $kataKunci = $request->string('q')->trim()->toString();
+        $kategoriDipilih = $request->filled('kategori') ? $request->integer('kategori') : null;
+
+        $produk = Produk::with('kategori')
+            ->when($kategoriDipilih, fn ($q) => $q->where('kategori_id', $kategoriDipilih))
+            ->when($kataKunci !== '', fn ($q) => $q->where('nama_produk', 'like', '%'.$kataKunci.'%'))
+            ->orderBy('nama_produk')
+            ->paginate(15)
+            ->withQueryString();
+
         return view('pemilik.produk', [
-            'produk' => Produk::with('kategori')->orderBy('nama_produk')->paginate(15),
+            'produk' => $produk,
             'kategori' => Kategori::orderBy('nama_kategori')->get(),
+            'kataKunci' => $kataKunci,
+            'kategoriDipilih' => $kategoriDipilih,
         ]);
     }
 
@@ -123,14 +135,14 @@ class PemilikController extends Controller
 
         $produk->update($data);
 
-        return redirect()->route('pemilik.produk')->with('berhasil', 'Produk diperbarui.');
+        return back()->with('berhasil', 'Produk diperbarui.');
     }
 
     public function hapusProduk(Produk $produk): RedirectResponse
     {
         $produk->delete();
 
-        return redirect()->route('pemilik.produk')->with('berhasil', 'Produk dihapus dari katalog.');
+        return back()->with('berhasil', 'Produk dihapus dari katalog.');
     }
 
     private function validasiProduk(Request $request): array

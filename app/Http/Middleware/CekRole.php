@@ -16,7 +16,7 @@ class CekRole
             return redirect()->route('login');
         }
 
-        if (in_array($user->role, $peran, true) || $user->role === 'pemilik') {
+        if (in_array($user->role, $peran, true)) {
             return $next($request);
         }
 

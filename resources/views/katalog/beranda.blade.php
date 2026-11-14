@@ -35,7 +35,6 @@
                 <div class="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-sm text-gray-500">
                     <span class="flex items-center gap-1.5"><span class="font-bold text-sukses">✔</span> Bayar aman via Midtrans</span>
                     <span class="flex items-center gap-1.5"><span class="font-bold text-sukses">✔</span> Gratis ongkir ambil di toko</span>
-                    <span class="flex items-center gap-1.5"><span class="font-bold text-sukses">✔</span> Resi bisa dilacak</span>
                 </div>
             </div>
 
@@ -129,7 +128,7 @@
                 <span class="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-primary-mist text-primary">🚚</span>
                 <div>
                     <p class="font-semibold">Kirim via Kurir</p>
-                    <p class="mt-1 text-sm text-gray-500">Ongkir dihitung otomatis; nomor resi bisa dilacak.</p>
+                    <p class="mt-1 text-sm text-gray-500">Ongkir dihitung otomatis</p>
                 </div>
             </div>
         </div>

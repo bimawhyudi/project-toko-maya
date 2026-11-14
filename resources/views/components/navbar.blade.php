@@ -21,10 +21,8 @@
                 <x-nav-item href="{{ route('katalog.index') }}" :aktif="($aktif ?? '') === 'katalog'">Katalog Produk</x-nav-item>
                 @if (Route::has('pesanan.index'))
                     @auth
-                        @if (in_array(auth()->user()->role, ['pelanggan', 'pemilik']))
-                            <x-nav-item href="{{ route('pesanan.index') }}" :aktif="($aktif ?? '') === 'pesanan'">Pesanan Saya</x-nav-item>
-                        @endif
                         @if (auth()->user()->role === 'pelanggan')
+                            <x-nav-item href="{{ route('pesanan.index') }}" :aktif="($aktif ?? '') === 'pesanan'">Pesanan Saya</x-nav-item>
                             <x-keranjang-ikon :aktif="($aktif ?? '') === 'keranjang'" />
                         @endif
                     @endauth

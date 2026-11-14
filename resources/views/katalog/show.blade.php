@@ -65,7 +65,7 @@
                 {{-- Beli --}}
                 <div class="mt-6 rounded-kartu border border-garis bg-white p-5 shadow-kartu">
                     @auth
-                        @if (in_array(auth()->user()->role, ['pelanggan', 'pemilik']) && $produk->stok > 0)
+                        @if (auth()->user()->role === 'pelanggan' && $produk->stok > 0)
                             <form action="{{ route('keranjang.tambah', $produk) }}" method="POST" class="flex flex-wrap items-end gap-3">
                                 @csrf
                                 <div>
