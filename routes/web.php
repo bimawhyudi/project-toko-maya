@@ -52,11 +52,10 @@ Route::middleware('auth')->group(function () {
 
         Route::get('/pesanan', [PesananController::class, 'index'])->name('pesanan.index');
         Route::get('/pesanan/{kode}', [PesananController::class, 'show'])->name('pesanan.show');
+        Route::get('/pesanan/{kode}/status', [PesananController::class, 'status'])->name('pesanan.status');
         Route::post('/pesanan/{kode}/diterima', [PesananController::class, 'diterima'])->name('pesanan.diterima');
 
         Route::get('/pesanan/{kode}/bayar', [PembayaranController::class, 'show'])->name('pembayaran.show');
-        Route::post('/pesanan/{kode}/bayar/simulasi', [PembayaranController::class, 'simulasi'])
-            ->name('pembayaran.simulasi'); // hanya aktif saat APP_ENV=local
     });
 
     // ==================== DASBOR KASIR ====================

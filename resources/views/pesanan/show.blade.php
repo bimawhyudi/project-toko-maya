@@ -111,4 +111,42 @@
             </dl>
         </div>
     </div>
+
+    @if ($pesanan->status_pesanan === \App\Models\Pesanan::STATUS_MENUNGGU_PEMBAYARAN)
+        @push('skrip')
+        <script>
+            (() => {
+                const urlStatus = '{{ route('pesanan.status', $pesanan->kode_pesanan, false) }}';
+                let sedangCek = false;
+
+                async function cekStatus() {
+                    if (sedangCek) return;
+                    sedangCek = true;
+
+                    try {
+                        const res = await fetch(urlStatus, {
+                            headers: { 'Accept': 'application/json' },
+                            cache: 'no-store',
+                        });
+                        if (! res.ok) return;
+
+                        const data = await res.json();
+                        if (data.status && data.status !== 'menunggu_pembayaran') {
+                            clearInterval(timer);
+                            window.location.reload();
+                        }
+                    } catch (_) {
+                    } finally {
+                        sedangCek = false;
+                    }
+                }
+
+                const timer = setInterval(cekStatus, 3000);
+                document.addEventListener('visibilitychange', () => {
+                    if (! document.hidden) cekStatus();
+                });
+            })();
+        </script>
+        @endpush
+    @endif
 </x-layout-publik>

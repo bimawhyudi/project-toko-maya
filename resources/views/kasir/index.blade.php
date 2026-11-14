@@ -100,7 +100,7 @@
                         </template>
                     </dl>
 
-                    <form action="{{ route('kasir.simpan') }}" method="POST" @submit="if (metode === 'tunai' && bayar < total) { event.preventDefault(); alert('Nominal uang bayar kurang dari total tagihan.'); } else { $el.querySelector('[name=items_json]').value = JSON.stringify(items); }">
+                    <form action="{{ route('kasir.simpan') }}" method="POST" @submit="if (metode === 'tunai' && bayar < total) { $event.preventDefault(); alert('Nominal uang bayar kurang dari total tagihan.'); } else { $el.querySelector('[name=items_json]').value = JSON.stringify(items); }">
                         @csrf
                         <input type="hidden" name="items_json" value="[]">
                         <input type="hidden" name="metode" :value="metode">
@@ -123,8 +123,7 @@
                 bayar: 0,
 
                 tambah(id) {
-                    const src = {{ $produk->map(fn ($p) => ['produk_id' => $p->id, 'nama' => $p->nama_produk, 'harga' => (float) $p->harga, 'stok' => $p->stok])->values()->toJson() }};
-                    const p = src.find(x => x.produk_id === id);
+                    const src = @js($produk->map(fn ($p) => ['produk_id' => $p->id, 'nama' => $p->nama_produk, 'harga' => (float) $p->harga, 'stok' => $p->stok])->values());                    const p = src.find(x => x.produk_id === id);
                     if (! p) return;
                     this.tambahItem(p);
                 },

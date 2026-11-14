@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Pesanan;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -37,6 +38,21 @@ class PesananController extends Controller
             ->firstOrFail();
 
         return view('pesanan.show', ['pesanan' => $pesanan]);
+    }
+
+    /**
+     * Endpoint JSON untuk memeriksa status pembayaran pesanan secara berkala.
+     */
+    public function status(Request $request, string $kode): JsonResponse
+    {
+        $pesanan = $request->user()->pesanan()
+            ->bukanKeranjang()
+            ->where('kode_pesanan', $kode)
+            ->firstOrFail(['id', 'status_pesanan']);
+
+        return response()->json([
+            'status' => $pesanan->status_pesanan,
+        ]);
     }
 
     /**

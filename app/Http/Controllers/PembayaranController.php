@@ -22,7 +22,9 @@ class PembayaranController extends Controller
             ->with('detail.produk')
             ->firstOrFail();
 
-        abort_unless($pesanan->status_pesanan === Pesanan::STATUS_MENUNGGU_PEMBAYARAN, 403, 'Pesanan ini tidak sedang menunggu pembayaran.');
+        if ($pesanan->status_pesanan !== Pesanan::STATUS_MENUNGGU_PEMBAYARAN) {
+            return redirect()->route('pesanan.show', $pesanan->kode_pesanan);
+        }
 
         $token = null;
         $galat = null;
@@ -34,7 +36,7 @@ class PembayaranController extends Controller
                 $galat = 'Gagal membuat token pembayaran: '.$e->getMessage();
             }
         } else {
-            $galat = 'Kunci Midtrans belum diisi di .env. Isi MIDTRANS_SERVER_KEY dan MIDTRANS_CLIENT_KEY, atau gunakan "Simulasi Bayar" di bawah saat pengembangan.';
+            $galat = 'Kunci Midtrans belum diisi di .env. Isi MIDTRANS_SERVER_KEY dan MIDTRANS_CLIENT_KEY terlebih dahulu.';
         }
 
         return view('pembayaran.show', [
@@ -46,23 +48,5 @@ class PembayaranController extends Controller
                 ? 'https://app.midtrans.com/snap/snap.js'
                 : 'https://app.sandbox.midtrans.com/snap/snap.js',
         ]);
-    }
-
-    /**
-     * Rute SIMULASI bayar — HANYA aktif bila APP_ENV=local.
-     * Meniru webhook Midtrans agar alur lunas bisa dites tanpa URL publik.
-     */
-    public function simulasi(Request $request, string $kode): RedirectResponse
-    {
-        abort_unless(app()->environment('local'), 404);
-
-        $pesanan = $request->user()->pesanan()
-            ->where('kode_pesanan', $kode)
-            ->firstOrFail();
-
-        $pesanan->tandaiDiprosesDanPotongStok();
-
-        return redirect()->route('pesanan.show', $pesanan->kode_pesanan)
-            ->with('berhasil', 'Simulasi pembayaran berhasil: pesanan LUNAS, stok dipotong, status menjadi Diproses.');
     }
 }

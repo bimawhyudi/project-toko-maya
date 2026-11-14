@@ -33,35 +33,62 @@
                     class="mt-6 w-full rounded-lg bg-primary py-4 font-aksen text-base font-bold text-white shadow-terangkat transition hover:bg-primary-dark">
                     Bayar Sekarang (QRIS / Virtual Account)
                 </button>
-                <p class="mt-3 text-xs text-gray-400">Halaman pembayaran aman dibuka oleh Midtrans. Jangan tutup halaman ini sebelum pembayaran selesai.</p>
-            @endif
-
-            @if (app()->environment('local'))
-                <div class="mt-6 rounded-kartu border border-dashed border-rating bg-rating/10 p-4">
-                    <p class="text-sm font-semibold text-yellow-800">Mode Pengembangan (local)</p>
-                    <p class="mt-1 text-sm text-gray-600">Belum punya kunci Midtrans / webhook publik? Gunakan simulasi: pesanan langsung lunas, stok dipotong, status jadi Diproses.</p>
-                    <form action="{{ route('pembayaran.simulasi', $pesanan->kode_pesanan) }}" method="POST" class="mt-3"
-                        x-data @submit.prevent="if (confirm('Jalankan simulasi bayar untuk pesanan ini?')) $el.submit()">
-                        @csrf
-                        <button type="submit" class="rounded-lg bg-navy px-6 py-3 text-sm font-bold text-white transition hover:bg-primary-darker">
-                            ▶ Simulasi Bayar (Lunas)
-                        </button>
-                    </form>
-                </div>
+                <p class="mt-3 text-xs text-gray-400">Halaman pembayaran aman dibuka oleh Midtrans. Halaman ini akan otomatis diperbarui setelah pembayaran terverifikasi.</p>
             @endif
         </div>
     </div>
 
     @push('skrip')
+    <script>
+        const urlStatusPesanan = '{{ route('pesanan.status', $pesanan->kode_pesanan, false) }}';
+        const urlDetailPesanan = '{{ route('pesanan.show', $pesanan->kode_pesanan, false) }}';
+        let sedangCekStatus = false;
+
+        async function cekStatusPembayaran() {
+            if (sedangCekStatus) return false;
+            sedangCekStatus = true;
+
+            try {
+                const res = await fetch(urlStatusPesanan, {
+                    headers: { 'Accept': 'application/json' },
+                    cache: 'no-store',
+                });
+                if (! res.ok) return false;
+
+                const data = await res.json();
+                if (data.status && data.status !== 'menunggu_pembayaran') {
+                    clearInterval(timerStatusPembayaran);
+                    window.location.href = urlDetailPesanan;
+                    return true;
+                }
+            } catch (_) {
+            } finally {
+                sedangCekStatus = false;
+            }
+
+            return false;
+        }
+
+        const timerStatusPembayaran = setInterval(cekStatusPembayaran, 2500);
+        document.addEventListener('visibilitychange', () => {
+            if (! document.hidden) cekStatusPembayaran();
+        });
+    </script>
+
     @if ($token)
         <script src="{{ $snapUrl }}" data-client-key="{{ $clientKey }}"></script>
         <script>
             document.getElementById('tombolBayar').addEventListener('click', () => {
                 snap.pay('{{ $token }}', {
-                    onSuccess: () => window.location = '{{ route('pesanan.show', $pesanan->kode_pesanan) }}',
-                    onPending: () => window.location = '{{ route('pesanan.show', $pesanan->kode_pesanan) }}',
-                    onError: () => window.location = '{{ route('pesanan.show', $pesanan->kode_pesanan) }}',
-                    onClose: () => alert('Anda menutup halaman pembayaran. Pesanan masih menunggu pembayaran sampai ' + '{{ $pesanan->expired_at?->format('H:i') }}' + '.'),
+                    onSuccess: () => window.location.href = urlDetailPesanan,
+                    onPending: () => window.location.href = urlDetailPesanan,
+                    onError: () => window.location.href = urlDetailPesanan,
+                    onClose: async () => {
+                        const sudahBerubah = await cekStatusPembayaran();
+                        if (! sudahBerubah) {
+                            alert('Anda menutup halaman pembayaran. Pesanan masih menunggu pembayaran sampai ' + '{{ $pesanan->expired_at?->format('H:i') }}' + '.');
+                        }
+                    },
                 });
             });
         </script>
