@@ -66,11 +66,12 @@ class PemilikController extends Controller
             ->orderBy('stok')->take(8)->get();
 
         $topProduk = Produk::query()
-            ->select('produk.*', DB::raw('COALESCE(SUM(detail_pesanan.jumlah), 0) AS terjual'))
+            ->with('kategori')
+            ->select('produk.id', 'produk.kategori_id', 'produk.nama_produk', 'produk.gambar', 'produk.harga', 'produk.stok', DB::raw('COALESCE(SUM(detail_pesanan.jumlah), 0) AS terjual'))
             ->join('detail_pesanan', 'detail_pesanan.produk_id', '=', 'produk.id')
             ->join('pesanan', 'pesanan.id', '=', 'detail_pesanan.pesanan_id')
             ->where('pesanan.status_pesanan', '!=', Pesanan::STATUS_KERANJANG)
-            ->groupBy('produk.id')
+            ->groupBy('produk.id', 'produk.kategori_id', 'produk.nama_produk', 'produk.gambar', 'produk.harga', 'produk.stok')
             ->orderByDesc('terjual')->take(5)->get();
 
         return view('pemilik.index', [

@@ -6,6 +6,11 @@
     body {
         @apply bg-surface text-gray-900 antialiased;
     }
+
+    /* Sembunyikan elemen ber-x-cloak sebelum Alpine.js siap */
+    [x-cloak] {
+        display: none !important;
+    }
 }
 
 @layer components {

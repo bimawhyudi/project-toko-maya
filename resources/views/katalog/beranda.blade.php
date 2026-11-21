@@ -42,7 +42,7 @@
                 <div class="absolute -inset-2 rounded-[18px] bg-primary-soft/60" aria-hidden="true"></div>
 
                 <img
-                    src="{{ asset('images/toko-asli.png') }}"
+                    src="{{ asset('images/toko-asli.jpg') }}"
                     alt="Toko Maya — Baut, Perbengkelan, Teknik, Pasar Raya Barat Blok B No. 18 Padang"
                     class="relative aspect-video w-full rounded-kartu border border-garis object-cover object-top shadow-terangkat"
                 >

@@ -9,8 +9,9 @@
             </div>
             @if ($keranjang->detail->isNotEmpty())
                 <form action="{{ route('keranjang.kosongkan') }}" method="POST"
-                    x-data @submit.prevent="if (confirm('Kosongkan seluruh keranjang?')) $el.submit()">
+                    onsubmit="return confirm('Kosongkan seluruh keranjang?')">
                     @csrf
+                    @method('DELETE')
                     <button type="submit" class="rounded-lg px-4 py-2 text-sm font-semibold text-bahaya transition hover:bg-bahaya/10">
                         Kosongkan Keranjang
                     </button>

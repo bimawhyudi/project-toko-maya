@@ -6,7 +6,7 @@
         </svg>
     </span>
     <span class="leading-tight">
-        <span class="block font-aksen text-xl font-bold tracking-wide text-primary">TOKO MAYA</span>
-        <span class="block text-[12px] font-medium text-gray-500">{{ config('toko.tagline') }}</span>
+        <span class="block font-aksen text-lg font-bold tracking-wide text-primary sm:text-xl">TOKO MAYA</span>
+        <span class="hidden text-[12px] font-medium text-gray-500 sm:block">{{ config('toko.tagline') }}</span>
     </span>
 </a>

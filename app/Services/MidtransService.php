@@ -5,14 +5,35 @@ namespace App\Services;
 use App\Models\Pesanan;
 use Illuminate\Support\Facades\Log;
 use Midtrans\Config;
-use Midtrans\Snap;
+use Midtrans\CoreApi;
+use Midtrans\Transaction;
 
-/**
- * Layanan pembayaran Midtrans Snap. Kunci hanya dibaca dari .env —
- * tidak pernah ditulis ke dalam kode.
- */
+
 class MidtransService
 {
+    /**
+     * Metode pembayaran di aplikasi -> payment_type Core API Midtrans.
+     * VA semua bank memakai payment_type "bank_transfer" (beda dengan Snap yang punya bca_va/bni_va/bri_va).
+     */
+    private const PEMBAYARAN_KE_CORE = [
+        'midtrans_qris' => 'qris',
+        'midtrans_va_bca' => 'bank_transfer',
+        'midtrans_va_bni' => 'bank_transfer',
+        'midtrans_va_bri' => 'bank_transfer',
+    ];
+
+    /**
+     * Bank tujuan Virtual Account untuk metode VA.
+     */
+    private function bankVa(string $metodePembayaran): string
+    {
+        return match ($metodePembayaran) {
+            'midtrans_va_bca' => 'bca',
+            'midtrans_va_bni' => 'bni',
+            'midtrans_va_bri' => 'bri',
+        };
+    }
+
     public function __construct()
     {
         Config::$serverKey = config('midtrans.server_key');
@@ -28,9 +49,82 @@ class MidtransService
     }
 
     /**
-     * Buat token Snap untuk satu pesanan. order_id = kode_pesanan.
+     * Buat pembayaran langsung via Core API sesuai metode yang dipilih saat checkout.
+     * Hasil charge (nomor Virtual Account / string QRIS, dsb) disimpan di kolom pembayaran.
      */
-    public function buatSnapToken(Pesanan $pesanan): string
+    public function buatPembayaran(Pesanan $pesanan): array
+    {
+        $paymentType = self::PEMBAYARAN_KE_CORE[$pesanan->metode_pembayaran] ?? null;
+
+        if ($paymentType === null) {
+            throw new \InvalidArgumentException('Metode pembayaran tidak dikenal: ' . $pesanan->metode_pembayaran);
+        }
+
+        $params = array_merge([
+            'payment_type' => $paymentType,
+            'transaction_details' => [
+                'order_id' => $pesanan->kode_pesanan,
+                'gross_amount' => (float) $pesanan->totalTagihan,
+            ],
+            'item_details' => $this->susunItemDetails($pesanan),
+            'customer_details' => $this->susunCustomerDetails($pesanan),
+            // Core API memakai custom_expiry (bukan "expiry" seperti Snap)
+            'custom_expiry' => [
+                'expiry_duration' => (int) config('toko.jam_kedaluwarsa', 24),
+                'unit' => 'hour',
+            ],
+        ], $this->payloadPaymentType($paymentType, $pesanan));
+
+        $res = CoreApi::charge($params);
+        $hasil = json_decode(json_encode($res), true) ?: [];
+
+        $detail = [
+            'transaction_id' => $hasil['transaction_id'] ?? null,
+            'payment_type' => $hasil['payment_type'] ?? $paymentType,
+            'transaction_status' => $hasil['transaction_status'] ?? 'pending',
+            'expiry_time' => $hasil['expiry_time'] ?? null,
+            'charged_at' => now()->toDateTimeString(),
+        ];
+
+        // Virtual Account: bank + nomor VA
+        if (! empty($hasil['va_numbers'][0])) {
+            $detail['bank'] = $hasil['va_numbers'][0]['bank'] ?? null;
+            $detail['va_number'] = $hasil['va_numbers'][0]['va_number'] ?? null;
+        } elseif (! empty($hasil['permata_va_number'])) {
+            $detail['bank'] = 'permata';
+            $detail['va_number'] = $hasil['permata_va_number'];
+        }
+
+        // QRIS: string QR + URL gambar QR siap tampil
+        if (! empty($hasil['qr_string'])) {
+            $detail['qr_string'] = $hasil['qr_string'];
+        }
+        foreach (($hasil['actions'] ?? []) as $aksi) {
+            if (($aksi['name'] ?? '') === 'generate-qr-code') {
+                $detail['qr_url'] = $aksi['url'] ?? null;
+            }
+        }
+
+        $pesanan->forceFill(['pembayaran' => $detail])->save();
+
+        return $detail;
+    }
+
+    /**
+     * Payload tambahan spesifik per payment_type Core API.
+     */
+    private function payloadPaymentType(string $paymentType, Pesanan $pesanan): array
+    {
+        return match ($paymentType) {
+            // QRIS Core API wajib memilih acquirer (saat ini gopay)
+            'qris' => ['qris' => ['acquirer' => 'gopay']],
+            // VA semua bank lewat bank_transfer + nama bank
+            'bank_transfer' => ['bank_transfer' => ['bank' => $this->bankVa($pesanan->metode_pembayaran)]],
+            default => [],
+        };
+    }
+
+    private function susunItemDetails(Pesanan $pesanan): array
     {
         $itemDetails = $pesanan->detail->map(fn ($d) => [
             'id' => (string) $d->produk_id,
@@ -48,32 +142,37 @@ class MidtransService
             ];
         }
 
-        $params = [
-            'transaction_details' => [
-                'order_id' => $pesanan->kode_pesanan,
-                'gross_amount' => (float) $pesanan->totalTagihan,
-            ],
-            'item_details' => $itemDetails,
-            'customer_details' => [
-                'first_name' => $pesanan->user?->nama ?? 'Pelanggan',
-                'email' => $pesanan->user?->email ?? 'pelanggan@tokomaya.test',
-                'phone' => $pesanan->user?->no_hp ?? '',
-            ],
-            'expiry' => [
-                'unit' => 'hour',
-                'duration' => (int) config('toko.jam_kedaluwarsa', 24),
-            ],
-        ];
-
-        return Snap::getSnapToken($params);
+        return $itemDetails;
     }
 
-    /**
-     * Verifikasi signature_key webhook:
-     * sha512(order_id + status_code + gross_amount + kunci).
-     * Mendukung dashboard lama (kunci = server key) maupun dashboard baru
-     * (kunci = "Signature Secret Key" yang terpisah dari server key API).
-     */
+    private function susunCustomerDetails(Pesanan $pesanan): array
+    {
+        return [
+            'first_name' => $pesanan->user?->nama ?? 'Pelanggan',
+            'email' => $pesanan->user?->email ?? 'pelanggan@tokomaya.test',
+            'phone' => $pesanan->user?->no_hp ?? '',
+        ];
+    }
+
+    public function sinkronkanStatus(Pesanan $pesanan): void
+    {
+        if (! $this->aktif() || $pesanan->status_pesanan !== Pesanan::STATUS_MENUNGGU_PEMBAYARAN) {
+            return;
+        }
+
+        try {
+            $hasil = Transaction::status($pesanan->kode_pesanan);
+            $payload = json_decode(json_encode($hasil), true) ?: [];
+            $payload['order_id'] ??= $pesanan->kode_pesanan;
+
+            $this->terapkanStatus($payload);
+            $pesanan->refresh();
+        } catch (\Throwable $e) {
+            
+        }
+    }
+
+ 
     public function signatureValid(array $payload): bool
     {
         $dariPayload = $payload['signature_key'] ?? '';
@@ -104,10 +203,7 @@ class MidtransService
         return array_values(array_unique($kandidat));
     }
 
-    /**
-     * Terjemahkan status webhook Midtrans ke status pesanan.
-     * Dipanggil hanya setelah signature valid.
-     */
+ 
     public function terapkanStatus(array $payload): void
     {
         $pesanan = Pesanan::where('kode_pesanan', $payload['order_id'] ?? '')->first();

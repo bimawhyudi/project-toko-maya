@@ -28,6 +28,7 @@ class Pesanan extends Model
         'expired_at' => 'datetime',
         'total_harga' => 'decimal:2',
         'ongkir' => 'decimal:2',
+        'pembayaran' => 'array',
     ];
 
     protected $fillable = [
@@ -41,6 +42,7 @@ class Pesanan extends Model
         'ekspedisi',
         'no_resi',
         'metode_pembayaran',
+        'pembayaran',
         'status_pesanan',
         'expired_at',
     ];

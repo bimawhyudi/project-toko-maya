@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Pesanan;
+use App\Services\MidtransService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -11,6 +12,8 @@ use Illuminate\View\View;
 
 class PesananController extends Controller
 {
+    public function __construct(private MidtransService $midtrans) {}
+
     public function index(Request $request): View
     {
         $status = $request->string('status')->toString();
@@ -37,6 +40,8 @@ class PesananController extends Controller
             ->with(['detail.produk.kategori'])
             ->firstOrFail();
 
+        $this->midtrans->sinkronkanStatus($pesanan);
+
         return view('pesanan.show', ['pesanan' => $pesanan]);
     }
 
@@ -48,7 +53,9 @@ class PesananController extends Controller
         $pesanan = $request->user()->pesanan()
             ->bukanKeranjang()
             ->where('kode_pesanan', $kode)
-            ->firstOrFail(['id', 'status_pesanan']);
+            ->firstOrFail(['id', 'kode_pesanan', 'status_pesanan']);
+
+        $this->midtrans->sinkronkanStatus($pesanan);
 
         return response()->json([
             'status' => $pesanan->status_pesanan,
